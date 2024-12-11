@@ -14,6 +14,7 @@ import '../../styles/globals.css';
 import { Button } from './ui/button';
 import { useContractorName } from '@/hooks/useContractorName';
 import Link from 'next/link';
+import Konva from 'konva';
 
 interface AnnotatorProps {
     whiteboardId: string;
@@ -27,6 +28,8 @@ interface Chunk {
     transcription: string;
     confidence: ConfidenceLevel;
     contractor: string;
+    whiteboardId: string; // Add this property
+    createdAt: Date; // Add this property
 }
 
 const WhiteboardAnnotator: React.FC<AnnotatorProps> = ({
@@ -37,7 +40,7 @@ const WhiteboardAnnotator: React.FC<AnnotatorProps> = ({
     const contractorName = useContractorName();
 
     const [image] = useImage(imageUrl);
-    const stageRef = useRef<any>(null);
+    const stageRef = useRef<Konva.Stage | null>(null); // Specify the type for stageRef
 
     // Store the entire whiteboard in one state variable
     const [whiteboard, setWhiteboard] = useState<Whiteboard | null>(null);
@@ -136,6 +139,8 @@ const WhiteboardAnnotator: React.FC<AnnotatorProps> = ({
             transcription,
             confidence,
             contractor: contractorName,
+            whiteboardId,
+            created_at: new Date().toISOString(),
         };
 
         try {
@@ -152,7 +157,13 @@ const WhiteboardAnnotator: React.FC<AnnotatorProps> = ({
                     if (!prev) return prev;
                     return {
                         ...prev,
-                        chunks: [...prev.chunks, savedChunk],
+                        chunks: [
+                            ...prev.chunks,
+                            {
+                                ...savedChunk,
+                                createdAt: savedChunk.createdAt.toISOString(),
+                            },
+                        ],
                     };
                 });
                 setCurrentRect({});
