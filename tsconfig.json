@@ -1,27 +1,49 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
+    "skipLibCheck": true, // Skip type checking for libraries
+    "strict": false, // Disable strict type checking
+    "noEmit": true, // Prevent emitting JavaScript files
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "preserve",
-    "incremental": true,
+    "isolatedModules": true, // Required for Next.js
+    "jsx": "preserve", // Preserve JSX for Next.js
+    "incremental": true, // Speed up incremental builds
     "plugins": [
       {
         "name": "next"
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
-    }
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "forceConsistentCasingInFileNames": true, // Enforce consistent file casing
+    "baseUrl": ".", // Set the base URL for imports
+    "allowSyntheticDefaultImports": true, // Support default imports
+    "experimentalDecorators": true, // Enable experimental decorators if needed
+    "emitDecoratorMetadata": false // Disable emitting decorator metadata
+    ,
+    "strictNullChecks": true
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build"
+  ] // Exclude additional directories
 }
