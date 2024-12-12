@@ -29,7 +29,7 @@ interface Chunk {
     confidence: ConfidenceLevel;
     contractor: string;
     whiteboardId: string; // Add this property
-    createdAt: Date; // Add this property
+    createdAt: string; // Add this property
 }
 
 const WhiteboardAnnotator: React.FC<AnnotatorProps> = ({
@@ -152,6 +152,7 @@ const WhiteboardAnnotator: React.FC<AnnotatorProps> = ({
 
             if (res.ok) {
                 const savedChunk: Chunk = await res.json();
+                console.log(savedChunk);
                 // Update whiteboard state optimistically
                 setWhiteboard((prev) => {
                     if (!prev) return prev;
@@ -161,7 +162,7 @@ const WhiteboardAnnotator: React.FC<AnnotatorProps> = ({
                             ...prev.chunks,
                             {
                                 ...savedChunk,
-                                createdAt: savedChunk.createdAt.toISOString(),
+                                createdAt: savedChunk.createdAt,
                             },
                         ],
                     };

@@ -1,13 +1,35 @@
 // src/app/api/whiteboards/route.ts
 import { NextResponse } from 'next/server';
-import db from '../../../../lib/db';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_KEY!,
+);
 
 export async function GET() {
-    // Read data from the database
-    await db.read();
+    try {
+        // Fetch all whiteboards from the Supabase database
+        const { data: whiteboards, error } = await supabase
+            .from('whiteboards')
+            .select('*');
 
-    // Retrieve whiteboards data or fallback to an empty array
-    const whiteboards = db.data?.whiteboards || [];
+        if (error) {
+            return NextResponse.json(
+                { message: 'Failed to fetch whiteboards', error },
+                { status: 500 },
+            );
+        }
 
-    return NextResponse.json(whiteboards, { status: 200 });
+        return NextResponse.json(whiteboards, { status: 200 });
+    } catch (error: unknown) {
+        const errorMessage =
+            error instanceof Error ? error.message : 'Unknown error';
+
+        return NextResponse.json(
+            { message: `Error processing request: ${errorMessage}` },
+            { status: 500 },
+        );
+    }
 }

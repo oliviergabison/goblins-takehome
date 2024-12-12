@@ -1,22 +1,29 @@
 // src/app/api/whiteboards/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { v4 as uuidv4 } from 'uuid';
-import { Chunk } from '../../../../../types';
-import db from '../../../../../lib/db';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_KEY!,
+);
 
 // GET handler: Fetch a whiteboard by ID
 export async function GET(
     req: NextRequest,
     context: { params: { id: string } },
 ) {
-    const { id } = await context.params; // Access params inside the function body
+    const { id } = await context.params;
 
-    await db.read();
-    const whiteboard = db.data?.whiteboards.find((wb) => wb.id === id);
+    const { data: whiteboard, error } = await supabase
+        .from('whiteboards')
+        .select('*, chunks(*)') // Fetch associated chunks
+        .eq('id', id)
+        .single();
 
-    if (!whiteboard) {
+    if (error || !whiteboard) {
         return NextResponse.json(
-            { message: 'Whiteboard not found' },
+            { message: 'Whiteboard not found', error },
             { status: 404 },
         );
     }
@@ -29,68 +36,102 @@ export async function POST(
     req: NextRequest,
     context: { params: { id: string } },
 ) {
-    const { id } = await context.params; // Access params inside the function body
+    const { id } = await context.params;
     const body = await req.json();
 
     const { coordinates, transcription, confidence, contractor } = body;
 
-    await db.read();
-    const whiteboard = db.data?.whiteboards.find((wb) => wb.id === id);
+    // Verify the whiteboard exists
+    const { data: whiteboard, error: fetchError } = await supabase
+        .from('whiteboards')
+        .select('id')
+        .eq('id', id)
+        .single();
 
-    if (!whiteboard) {
+    if (fetchError || !whiteboard) {
+        console.error(fetchError);
         return NextResponse.json(
-            { message: 'Whiteboard not found' },
+            { message: 'Whiteboard not found', error: fetchError },
             { status: 404 },
         );
     }
 
-    const newChunk: Chunk = {
-        id: uuidv4(),
-        whiteboardId: id,
+    // Create a new chunk
+    const newChunk = {
+        whiteboard_id: id,
         coordinates,
         transcription,
         confidence,
         contractor,
-        createdAt: new Date().toISOString(),
+        created_at: new Date().toISOString(),
     };
 
-    whiteboard.chunks.push(newChunk);
+    const { error: insertError } = await supabase
+        .from('chunks')
+        .insert(newChunk);
 
-    // Update contractor stats
-    const contractorData = db.data?.contractors.find(
-        (c) => c.name === contractor,
-    );
-    if (contractorData) {
-        contractorData.processed += 1;
-        contractorData.lastProcessed = new Date().toISOString();
+    if (insertError) {
+        console.error(insertError);
+        return NextResponse.json(
+            { message: 'Failed to add chunk', error: insertError },
+            { status: 500 },
+        );
     }
 
-    await db.write();
+    // Update contractor stats
+    const { data: contractorData, error: contractorFetchError } = await supabase
+        .from('contractors')
+        .select('processed, last_processed')
+        .eq('name', contractor)
+        .single();
+
+    if (!contractorFetchError && contractorData) {
+        await supabase
+            .from('contractors')
+            .update({
+                processed: contractorData.processed + 1,
+                last_processed: new Date().toISOString(),
+            })
+            .eq('name', contractor);
+    }
+
     return NextResponse.json(newChunk, { status: 201 });
 }
 
+// PATCH handler: Update whiteboard completeness
 export async function PATCH(
     req: NextRequest,
     context: { params: { id: string } },
 ) {
-    const { id } = context.params;
+    const { id } = await context.params;
     const { complete } = await req.json(); // Expect { complete: boolean }
 
-    await db.read();
-    const whiteboard = db.data?.whiteboards.find((wb) => wb.id === id);
+    // Verify the whiteboard exists
+    const { data: whiteboard, error: fetchError } = await supabase
+        .from('whiteboards')
+        .select('id, complete')
+        .eq('id', id)
+        .single();
 
-    if (!whiteboard) {
+    if (fetchError || !whiteboard) {
         return NextResponse.json(
-            { message: 'Whiteboard not found' },
+            { message: 'Whiteboard not found', error: fetchError },
             { status: 404 },
         );
     }
 
-    whiteboard.complete = complete;
-    await db.write();
+    // Update the completeness of the whiteboard
+    const { error: updateError } = await supabase
+        .from('whiteboards')
+        .update({ complete })
+        .eq('id', id);
 
-    return NextResponse.json(
-        { complete: whiteboard.complete },
-        { status: 200 },
-    );
+    if (updateError) {
+        return NextResponse.json(
+            { message: 'Failed to update whiteboard', error: updateError },
+            { status: 500 },
+        );
+    }
+
+    return NextResponse.json({ complete }, { status: 200 });
 }

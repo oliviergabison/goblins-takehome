@@ -1,6 +1,12 @@
 // src/app/api/auth/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import db from '../../../../lib/db';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_KEY!,
+);
 
 export async function POST(req: NextRequest) {
     const { name } = await req.json();
@@ -11,17 +17,37 @@ export async function POST(req: NextRequest) {
         );
     }
 
-    await db.read();
-    let contractor = db.data?.contractors.find((c) => c.name === name);
+    // Check if the contractor exists in Supabase
+    const { data: contractor, error: fetchError } = await supabase
+        .from('contractors')
+        .select('*')
+        .eq('name', name)
+        .single();
+
+    if (fetchError && fetchError.code !== 'PGRST116') {
+        // If the error is not about no matching rows, return an error
+        return NextResponse.json(
+            { message: 'Error checking contractor', error: fetchError },
+            { status: 500 },
+        );
+    }
 
     if (!contractor) {
-        contractor = {
-            name,
-            processed: 0,
-            lastProcessed: new Date().toISOString(),
-        };
-        db.data?.contractors.push(contractor);
-        await db.write();
+        // Add new contractor if it doesn't exist
+        const { error: insertError } = await supabase
+            .from('contractors')
+            .insert({
+                name,
+                processed: 0,
+                last_processed: new Date().toISOString(),
+            });
+
+        if (insertError) {
+            return NextResponse.json(
+                { message: 'Error creating contractor', error: insertError },
+                { status: 500 },
+            );
+        }
     }
 
     // Set a cookie

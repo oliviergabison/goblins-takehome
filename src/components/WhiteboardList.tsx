@@ -33,10 +33,15 @@ const WhiteboardList = () => {
 
     if (loading) return <p>Loading whiteboards...</p>;
 
+    const handleClick = async () => {
+        await fetch('/api/test');
+    };
+
     return (
         <>
             <Header />
             <div className="p-8">
+                <Button onClick={handleClick}>Do stuff</Button>
                 <Table>
                     <TableCaption>List of Whiteboards to Review</TableCaption>
                     <TableHeader>

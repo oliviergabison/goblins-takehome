@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db from '../../../../../../lib/db';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_KEY!,
+);
 
 // Define the route handler
 export async function DELETE(
@@ -7,34 +13,38 @@ export async function DELETE(
     { params }: { params: { id: string; chunkId: string } },
 ) {
     try {
-        const { id, chunkId } = await params;
+        const { id, chunkId } = params;
 
-        // Read the database
-        await db.read();
-        const whiteboard = db.data?.whiteboards.find((wb) => wb.id === id);
+        // Verify the whiteboard exists
+        const { data: whiteboard, error: whiteboardError } = await supabase
+            .from('whiteboards')
+            .select('id')
+            .eq('id', id)
+            .single();
 
-        if (!whiteboard) {
+        if (whiteboardError || !whiteboard) {
             return NextResponse.json(
-                { message: 'Whiteboard not found' },
+                { message: 'Whiteboard not found', error: whiteboardError },
                 { status: 404 },
             );
         }
 
-        // Remove the chunk with the given chunkId
-        const initialLength = whiteboard.chunks.length;
-        whiteboard.chunks = whiteboard.chunks.filter(
-            (chunk) => chunk.id !== chunkId,
-        );
+        // Delete the chunk with the given chunkId
+        const { error: deleteError } = await supabase
+            .from('chunks')
+            .delete()
+            .eq('id', chunkId)
+            .eq('whiteboard_id', id); // Ensure the chunk belongs to the specified whiteboard
 
-        if (whiteboard.chunks.length === initialLength) {
+        if (deleteError) {
             return NextResponse.json(
-                { message: 'Chunk not found' },
+                {
+                    message: 'Chunk not found or failed to delete',
+                    error: deleteError,
+                },
                 { status: 404 },
             );
         }
-
-        // Write the updated data back to the database
-        await db.write();
 
         return NextResponse.json(
             { message: 'Chunk deleted successfully' },
