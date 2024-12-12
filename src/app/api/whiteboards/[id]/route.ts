@@ -11,7 +11,7 @@ const supabase = createClient(
 // GET handler: Fetch a whiteboard by ID
 export async function GET(
     req: NextRequest,
-    context: { params: { id: string } },
+    context: { params: Promise<{ id: string }> },
 ) {
     const { id } = await context.params;
 
@@ -36,7 +36,7 @@ export async function POST(
     req: NextRequest,
     context: { params: { id: string } },
 ) {
-    const { id } = await context.params;
+    const { id } = context.params; // Extract whiteboard ID from route params
     const body = await req.json();
 
     const { coordinates, transcription, confidence, contractor } = body;
@@ -66,9 +66,12 @@ export async function POST(
         created_at: new Date().toISOString(),
     };
 
-    const { error: insertError } = await supabase
+    // Insert the chunk and return the inserted row
+    const { data: insertedChunk, error: insertError } = await supabase
         .from('chunks')
-        .insert(newChunk);
+        .insert(newChunk)
+        .select('*') // Return the inserted row(s)
+        .single();
 
     if (insertError) {
         console.error(insertError);
@@ -95,13 +98,13 @@ export async function POST(
             .eq('name', contractor);
     }
 
-    return NextResponse.json(newChunk, { status: 201 });
+    return NextResponse.json(insertedChunk, { status: 201 });
 }
 
 // PATCH handler: Update whiteboard completeness
 export async function PATCH(
     req: NextRequest,
-    context: { params: { id: string } },
+    context: { params: Promise<{ id: string }> },
 ) {
     const { id } = await context.params;
     const { complete } = await req.json(); // Expect { complete: boolean }

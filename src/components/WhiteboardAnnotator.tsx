@@ -22,15 +22,15 @@ interface AnnotatorProps {
     onSave: () => void;
 }
 
-interface Chunk {
-    id: string;
-    coordinates: { x: number; y: number; width: number; height: number };
-    transcription: string;
-    confidence: ConfidenceLevel;
-    contractor: string;
-    whiteboardId: string; // Add this property
-    createdAt: string; // Add this property
-}
+// interface Chunk {
+//     id: string;
+//     coordinates: { x: number; y: number; width: number; height: number };
+//     transcription: string;
+//     confidence: ConfidenceLevel;
+//     contractor: string;
+//     whiteboardId: string; // Add this property
+//     createdAt: string; // Add this property
+// }
 
 const WhiteboardAnnotator: React.FC<AnnotatorProps> = ({
     whiteboardId,
@@ -151,20 +151,13 @@ const WhiteboardAnnotator: React.FC<AnnotatorProps> = ({
             });
 
             if (res.ok) {
-                const savedChunk: Chunk = await res.json();
-                console.log(savedChunk);
+                const savedChunk = await res.json();
                 // Update whiteboard state optimistically
                 setWhiteboard((prev) => {
                     if (!prev) return prev;
                     return {
                         ...prev,
-                        chunks: [
-                            ...prev.chunks,
-                            {
-                                ...savedChunk,
-                                createdAt: savedChunk.createdAt,
-                            },
-                        ],
+                        chunks: [...prev.chunks, savedChunk],
                     };
                 });
                 setCurrentRect({});

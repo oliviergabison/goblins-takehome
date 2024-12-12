@@ -10,10 +10,14 @@ const supabase = createClient(
 // Define the route handler
 export async function DELETE(
     req: NextRequest,
-    { params }: { params: { id: string; chunkId: string } },
+    props: { params: Promise<{ id: string; chunkId: string }> },
 ) {
+    const params = await props.params;
     try {
+        console.log('params', params);
         const { id, chunkId } = params;
+
+        console.log(id, chunkId);
 
         // Verify the whiteboard exists
         const { data: whiteboard, error: whiteboardError } = await supabase

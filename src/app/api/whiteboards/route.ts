@@ -13,7 +13,8 @@ export async function GET() {
         // Fetch all whiteboards from the Supabase database
         const { data: whiteboards, error } = await supabase
             .from('whiteboards')
-            .select('*');
+            .select('*')
+            .order('created_at');
 
         if (error) {
             return NextResponse.json(
